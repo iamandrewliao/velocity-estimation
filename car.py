@@ -32,7 +32,7 @@ while cap.isOpened():
         for box, track_id in zip(boxes, track_ids):
             x, y, w, h = box
             track = track_history[track_id]
-            track.append((float(x)-w/2, float(y)-h/2))  # x, y is the center point
+            track.append((float(x)-w/2, float(y)))  # x, y is the center point
             if len(track) > 30:  # retain 90 tracks for 90 frames
                 track.pop(0)
 
@@ -41,7 +41,7 @@ while cap.isOpened():
             cv2.polylines(annotated_frame, [points], isClosed=False, color=(229, 255, 0), thickness=5)
 
         # Display the annotated frame
-        cv2.imshow("YOLOv8 Tracking", annotated_frame)
+        # cv2.imshow("YOLOv8 Tracking", annotated_frame)
 
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -53,3 +53,5 @@ while cap.isOpened():
 # Release the video capture object and close the display window
 cap.release()
 cv2.destroyAllWindows()
+
+print(track_history[1])
