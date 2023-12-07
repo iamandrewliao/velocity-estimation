@@ -27,7 +27,7 @@ track_history = defaultdict(lambda: [])
 # we will use track_idx to access position data to calculate speed later
 track_idx = 0
 # window is the amount of data points we look at to get the current speed
-window = 10
+window = 5
 # fps is necessary for calculating speed
 fps = 60
 
