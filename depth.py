@@ -6,10 +6,14 @@ https://amroamroamro.github.io/mexopencv/matlab/cv.stereoRectifyUncalibrated.htm
 https://amroamroamro.github.io/mexopencv/matlab/cv.findFundamentalMat.html
 '''
 
+from ultralytics import YOLO
+from PIL import Image
 import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+
+model = YOLO('yolov8n-seg.pt')
 
 video_path1 = "vids/left_fullcar.mp4"
 video_path2 = "vids/right_fullcar.mp4"
@@ -35,7 +39,8 @@ flann = cv2.FlannBasedMatcher(index_params,search_params)
 while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
     okay2, img2 = cap2.read()
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    img1_color = img1  # keeping a color image to do segmentation later
+    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
     img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
     img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
     img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
@@ -77,6 +82,14 @@ while cap1.isOpened() or cap2.isOpened():
             _, H1, H2 = cv2.stereoRectifyUncalibrated(np.float32(p1), np.float32(p2), F, imgSize=[w1, h1])
             img1_rectified = cv2.warpPerspective(img1, H1, (w1, h1))
             img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2))
+            # Segmentation mask
+            img1_color_rectified = cv2.warpPerspective(img1_color, H1, (w1, h1))
+            results = model.predict(img1_color_rectified)
+            result = (results[0])
+            mask = result.masks[0].data[0].numpy()  # mask for first car
+            mask_polygon = result.masks[0].xy[0]  # mask coordinates
+            mask_img = Image.fromarray(mask, "I")
+            mask_img.show()
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
@@ -94,7 +107,7 @@ while cap1.isOpened() or cap2.isOpened():
             disparity = disparity.astype(np.float32)
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
-            print(frame_count)
+            # print(frame_count)
             # # Displaying the disparity map
             # cv2.namedWindow("disp", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("disp", 1280, 720)

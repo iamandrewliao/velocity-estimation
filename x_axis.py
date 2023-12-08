@@ -1,6 +1,5 @@
 from ultralytics import YOLO
 import cv2
-from PIL import Image
 import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
@@ -17,7 +16,7 @@ import matplotlib.pyplot as plt
 # img1 = cv2.imread('left-fullcar.jpg')
 # img2 = cv2.imread('right-fullcar.jpg')
 
-model = YOLO('yolov8n-seg.pt')
+model = YOLO('yolov8n.pt')
 
 video_path = "vids/right_fullcar.mp4"
 
@@ -63,7 +62,7 @@ while cap.isOpened():
             cv2.polylines(annotated_frame, [points], isClosed=False, color=(229, 255, 0), thickness=5)
         # print(track_history[1])
 
-        # # Speed calculation (rolling avg; position change over time window)
+        # # Speed calculation & annotation (rolling avg; position change over time window)
         # if len(track_history[1])-frame_count >= window:  # e.g. if x amt of data points are available in the track_history
         #     # frame_count is used to move through track_history to get the last x data points to get "current" speed
         #     # print(f"frame_count: {frame_count}")
@@ -78,13 +77,6 @@ while cap.isOpened():
         # For speed calculation, get position every n frame; n determined by window
         if frame_count % window == 0:
             positions = np.append(positions, track_history[1][frame_count][0])
-            # Segmentation mask
-            results = model.predict(frame)
-            result = (results[0])
-            mask = result.masks[0].data[0].numpy()  # mask for first car
-            mask_polygon = result.masks[0].xy[0]  # mask coordinates
-            mask_img = Image.fromarray(mask, "I")
-            mask_img.show()
 
         # Display the annotated frame
         cv2.imshow("Annotated Frame", annotated_frame)
