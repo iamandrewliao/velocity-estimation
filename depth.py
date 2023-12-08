@@ -39,11 +39,11 @@ flann = cv2.FlannBasedMatcher(index_params,search_params)
 while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
     okay2, img2 = cap2.read()
+    img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
+    img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
     img1_color = img1  # keeping a color image to do segmentation later
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
-    img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
     img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
     # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
     # cv2.resizeWindow("frames", 1600, 500)
     # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
