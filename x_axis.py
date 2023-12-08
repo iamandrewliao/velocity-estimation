@@ -31,6 +31,7 @@ window = 5
 # fps is necessary for calculating speed
 fps = 60
 
+frame_count=0
 # Loop through the video frames
 while cap.isOpened():
     # Read a frame from the video
@@ -66,6 +67,7 @@ while cap.isOpened():
             # print(f"track_idx: {track_idx}")
             # print(f"len(track_history[1])-track_idx: {len(track_history[1])-track_idx}")
             # print("speed calculation possible")
+            print(frame_count)
             x_init = track_history[1][track_idx][0]
             x_final = track_history[1][-1][0]
             cur_speed = (x_init - x_final) / ((1 / fps) * window)  # window is essentially the # of frames considered
@@ -74,6 +76,8 @@ while cap.isOpened():
 
         # Display the annotated frame
         cv2.imshow("Annotated Frame", annotated_frame)
+
+        frame_count += 1
 
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord("q"):

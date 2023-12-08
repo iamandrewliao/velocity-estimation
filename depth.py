@@ -36,7 +36,9 @@ while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
     okay2, img2 = cap2.read()
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
     img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
     # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
     # cv2.resizeWindow("frames", 1600, 500)
     # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
@@ -78,7 +80,7 @@ while cap1.isOpened() or cap2.isOpened():
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
-            stereo = cv2.StereoSGBM.create(minDisparity=-20, numDisparities=112, blockSize=9)
+            stereo = cv2.StereoSGBM.create(minDisparity=-20, numDisparities=112, blockSize=19)
             # Updating the parameters based on the trackbar positions
             # numDisparities = cv2.getTrackbarPos('numDisparities', 'disp') * 16
             # blockSize = cv2.getTrackbarPos('blockSize', 'disp') * 2 + 5
@@ -92,6 +94,7 @@ while cap1.isOpened() or cap2.isOpened():
             disparity = disparity.astype(np.float32)
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
+            print(frame_count)
             # # Displaying the disparity map
             # cv2.namedWindow("disp", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("disp", 1280, 720)
