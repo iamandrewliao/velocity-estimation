@@ -110,7 +110,7 @@ while cap1.isOpened() or cap2.isOpened():
             disparities = np.append(disparities, cur_disp)
 
         frame_count += 1
-        
+
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

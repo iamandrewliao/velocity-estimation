@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import cv2
+from PIL import Image
 import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ import matplotlib.pyplot as plt
 # img1 = cv2.imread('left-fullcar.jpg')
 # img2 = cv2.imread('right-fullcar.jpg')
 
-model = YOLO('yolov8n.pt')
+model = YOLO('yolov8n-seg.pt')
 
 video_path = "vids/right_fullcar.mp4"
 
@@ -39,14 +40,14 @@ while cap.isOpened():
     success, frame = cap.read()
     if success:
         # Run tracking on the frame, persisting tracks between frames
-        results = model.track(frame, persist=True)
+        track_results = model.track(frame, persist=True)
 
         # Get the boxes and track IDs
-        boxes = results[0].boxes.xywh.cpu()  # (x,y) = center point
-        track_ids = results[0].boxes.id.int().cpu().tolist()  # id = track IDs of the boxes (if available)
+        boxes = track_results[0].boxes.xywh.cpu()  # (x,y) = center point
+        track_ids = track_results[0].boxes.id.int().cpu().tolist()  # id = track IDs of the boxes (if available)
 
         # Visualize the results on the frame
-        annotated_frame = results[0].plot()
+        annotated_frame = track_results[0].plot()
 
         # Plot the tracks
         for box, track_id in zip(boxes, track_ids):
@@ -77,6 +78,13 @@ while cap.isOpened():
         # For speed calculation, get position every n frame; n determined by window
         if frame_count % window == 0:
             positions = np.append(positions, track_history[1][frame_count][0])
+            # Segmentation mask
+            results = model.predict(frame)
+            result = (results[0])
+            mask = result.masks[0].data[0].numpy()  # mask for first car
+            mask_polygon = result.masks[0].xy[0]  # mask coordinates
+            mask_img = Image.fromarray(mask, "I")
+            mask_img.show()
 
         # Display the annotated frame
         cv2.imshow("Annotated Frame", annotated_frame)
