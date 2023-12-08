@@ -109,15 +109,16 @@ while cap1.isOpened() or cap2.isOpened():
             cur_disp = input("Enter disparity: ")
             disparities = np.append(disparities, cur_disp)
 
-    frame_count += 1
+        frame_count += 1
+        
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
 
     if not okay1 or not okay2:
-        print('Cant read the video, Exit!')
+        print("Can't read the video, Exit!")
         break
 
-    # Break the loop if 'q' is pressed
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
     # # Wait for a key press
     # key = cv2.waitKey(0) & 0xFF
     # # if pressed key is "Space", continue to the next frame

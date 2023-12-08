@@ -24,14 +24,15 @@ cap = cv2.VideoCapture(video_path)
 
 # Store the track history
 track_history = defaultdict(lambda: [])
-# we will use track_idx to access position data to calculate speed later
-track_idx = 0
+# we will use frame_count to access position data to calculate speed later
+frame_count = 0
 # window is the amount of data points we look at to get the current speed
 window = 5
 # fps is necessary for calculating speed
 fps = 60
+# position data
+positions = np.array([])
 
-frame_count=0
 # Loop through the video frames
 while cap.isOpened():
     # Read a frame from the video
@@ -61,18 +62,21 @@ while cap.isOpened():
             cv2.polylines(annotated_frame, [points], isClosed=False, color=(229, 255, 0), thickness=5)
         # print(track_history[1])
 
-        # Speed calculation (rolling avg; position change over time window)
-        if len(track_history[1])-track_idx >= window:  # e.g. if x amt of data points are available in the track_history
-            # track_idx is used to move through track_history to get the last x data points to get "current" speed
-            # print(f"track_idx: {track_idx}")
-            # print(f"len(track_history[1])-track_idx: {len(track_history[1])-track_idx}")
-            # print("speed calculation possible")
-            print(frame_count)
-            x_init = track_history[1][track_idx][0]
-            x_final = track_history[1][-1][0]
-            cur_speed = (x_init - x_final) / ((1 / fps) * window)  # window is essentially the # of frames considered
-            cv2.putText(annotated_frame, f"Speed (pixels/sec): {cur_speed}", (50, 50), 2, 1, (229, 255, 0), 2)
-            track_idx += 1
+        # # Speed calculation (rolling avg; position change over time window)
+        # if len(track_history[1])-frame_count >= window:  # e.g. if x amt of data points are available in the track_history
+        #     # frame_count is used to move through track_history to get the last x data points to get "current" speed
+        #     # print(f"frame_count: {frame_count}")
+        #     # print(f"len(track_history[1])-frame_count: {len(track_history[1])-frame_count}")
+        #     # print("speed calculation possible")
+        #     x_init = track_history[1][frame_count][0]
+        #     x_final = track_history[1][-1][0]
+        #     cur_speed = (x_init - x_final) / ((1 / fps) * window)  # window is essentially the # of frames considered
+        #     cv2.putText(annotated_frame, f"Speed (pixels/sec): {cur_speed}", (50, 50), 2, 1, (229, 255, 0), 2)
+        #     frame_count += 1
+
+        # For speed calculation, get position every n frame; n determined by window
+        if frame_count % window == 0:
+            positions = np.append(positions, track_history[1][frame_count][0])
 
         # Display the annotated frame
         cv2.imshow("Annotated Frame", annotated_frame)
@@ -89,6 +93,9 @@ while cap.isOpened():
 # Release the video capture object and close the display window
 cap.release()
 cv2.destroyAllWindows()
+
+positions.tofile('positions.csv', sep=',')
+
 #
 # print(track_history[1])  # output the track coordinates for car id=1
 # # the track coordinates define the x-axis movement aka side-to-side
