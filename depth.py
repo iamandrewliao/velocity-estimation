@@ -7,7 +7,7 @@ https://amroamroamro.github.io/mexopencv/matlab/cv.findFundamentalMat.html
 '''
 
 from ultralytics import YOLO
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 import cv2
 import matplotlib
@@ -88,8 +88,12 @@ while cap1.isOpened() or cap2.isOpened():
             result = (results[0])
             mask = result.masks[0].data[0].numpy()  # mask for first car
             mask_polygon = result.masks[0].xy[0]  # mask coordinates
-            mask_img = Image.fromarray(mask, "I")
-            mask_img.show()
+            # mask_img = Image.fromarray(mask, "I")
+            # mask_img.show()
+            mask_polygon = np.array(mask_polygon)
+            # segmented_img = cv2.polylines(img1_color_rectified, pts=np.int32([mask_polygon]),
+            #                               isClosed=True, color=(255, 0, 0), thickness=2)
+            # cv2.imshow('segmentation', segmented_img)
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
@@ -108,10 +112,10 @@ while cap1.isOpened() or cap2.isOpened():
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
             # print(frame_count)
-            # # Displaying the disparity map
-            # cv2.namedWindow("disp", cv2.WINDOW_NORMAL)
-            # cv2.resizeWindow("disp", 1280, 720)
-            # cv2.imshow("disp", disparity)
+            # Displaying the disparity map
+            segmented_disp = cv2.polylines(disparity, pts=np.int32([mask_polygon]),
+                                          isClosed=True, color=(255, 0, 0), thickness=2)
+            cv2.imshow('segmented disparity image', segmented_disp)
             orig_map = matplotlib.colormaps.get_cmap('hot')
             # reversing the original colormap using reversed() function
             reversed_map = orig_map.reversed()
