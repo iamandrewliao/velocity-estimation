@@ -85,15 +85,11 @@ while cap1.isOpened() or cap2.isOpened():
             # Segmentation mask
             img1_color_rectified = cv2.warpPerspective(img1_color, H1, (w1, h1))
             results = model.predict(img1_color_rectified)
-            result = (results[0])
+            result = results[0]
             mask = result.masks[0].data[0].numpy()  # mask for first car
+            # print(mask.shape)
             mask_polygon = result.masks[0].xy[0]  # mask coordinates
-            # mask_img = Image.fromarray(mask, "I")
-            # mask_img.show()
             mask_polygon = np.array(mask_polygon)
-            # segmented_img = cv2.polylines(img1_color_rectified, pts=np.int32([mask_polygon]),
-            #                               isClosed=True, color=(255, 0, 0), thickness=2)
-            # cv2.imshow('segmentation', segmented_img)
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
@@ -114,8 +110,8 @@ while cap1.isOpened() or cap2.isOpened():
             # print(frame_count)
             # Displaying the disparity map
             segmented_disp = cv2.polylines(disparity, pts=np.int32([mask_polygon]),
-                                          isClosed=True, color=(255, 0, 0), thickness=2)
-            cv2.imshow('segmented disparity image', segmented_disp)
+                                           isClosed=True, color=(229, 255, 0), thickness=4)
+            # cv2.imshow('segmented disparity image', segmented_disp)
             orig_map = matplotlib.colormaps.get_cmap('hot')
             # reversing the original colormap using reversed() function
             reversed_map = orig_map.reversed()
@@ -123,6 +119,12 @@ while cap1.isOpened() or cap2.isOpened():
             # plt.clim(-30, 30)
             plt.colorbar()
             plt.show()
+            # # Get the average disparity values within the segmentation
+            # mask_test = np.zeros((disparity.shape[0], disparity.shape[1]), dtype=np.uint8)
+            # cv2.fillPoly(mask_test, np.int32([mask_polygon]), 255)
+            # average_values = cv2.mean(disparity, mask=mask_test)
+            # average_values = cv2.mean(disparity)
+            # print(average_values)
             cur_disp = input("Enter disparity: ")
             disparities = np.append(disparities, cur_disp)
 
