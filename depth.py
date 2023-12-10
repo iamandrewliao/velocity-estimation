@@ -93,7 +93,7 @@ while cap1.isOpened() or cap2.isOpened():
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
-            stereo = cv2.StereoSGBM.create(minDisparity=-20, numDisparities=112, blockSize=19)
+            stereo = cv2.StereoSGBM.create(minDisparity=-30, numDisparities=128, blockSize=13)
             # Updating the parameters based on the trackbar positions
             # numDisparities = cv2.getTrackbarPos('numDisparities', 'disp') * 16
             # blockSize = cv2.getTrackbarPos('blockSize', 'disp') * 2 + 5
