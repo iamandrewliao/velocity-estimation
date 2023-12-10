@@ -12,6 +12,9 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+from stereovision.calibration import StereoCalibrator, StereoCalibration
+from stereovision.blockmatchers import StereoBM, StereoSGBM
+import os
 
 model = YOLO('yolov8n-seg.pt')
 
@@ -36,18 +39,29 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)   # or pass empty dictionary
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
+stereo = cv2.StereoSGBM.create(minDisparity=5, numDisparities=112, blockSize=3)
+stereo_right = cv2.ximgproc.createRightMatcher(stereo)
+wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
+wls_filter.setLambda(30000)
+wls_filter.setSigmaColor(2.7)
+
 while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
     okay2, img2 = cap2.read()
-    img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
-    img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
-    img1_color = img1  # keeping a color image to do segmentation later
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
-    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-    # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow("frames", 1600, 500)
-    # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
     if okay1 and okay2:
+        img2=cv2.warpAffine(img2,
+                      np.array([[1,0,0],
+                                [0,1,-24]],dtype=np.float32),
+                                (img2.shape[1],img2.shape[0]))
+        img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
+        img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
+        img1_color = img1  # keeping a color image to do segmentation later
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
+        # cv2.resizeWindow("frames", 1600, 500)
+        # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
+    
         # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
         # cv2.resizeWindow("frames", 1600, 500)
         # cv2.imshow("frames", np.concatenate((frame1, frame2), axis=1))
@@ -84,7 +98,8 @@ while cap1.isOpened() or cap2.isOpened():
             img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2))
             # Segmentation mask
             img1_color_rectified = cv2.warpPerspective(img1_color, H1, (w1, h1))
-            results = model.predict(img1_color_rectified)
+            print(img1_color_rectified.shape)
+            results = model.predict(img1_color_rectified,imgsz=1280)
             result = (results[0])
             mask = result.masks[0].data[0].numpy()  # mask for first car
             mask_polygon = result.masks[0].xy[0]  # mask coordinates
@@ -93,7 +108,11 @@ while cap1.isOpened() or cap2.isOpened():
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
-            stereo = cv2.StereoSGBM.create(minDisparity=-20, numDisparities=112, blockSize=19)
+            # stereo = cv2.StereoSGBM.create(minDisparity=5, numDisparities=112, blockSize=9)
+            # stereo_right = cv2.ximgproc.createRightMatcher(stereo)
+            # wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
+            # wls_filter.setLambda(30000)
+            # wls_filter.setSigmaColor(2.7)
             # Updating the parameters based on the trackbar positions
             # numDisparities = cv2.getTrackbarPos('numDisparities', 'disp') * 16
             # blockSize = cv2.getTrackbarPos('blockSize', 'disp') * 2 + 5
@@ -103,10 +122,14 @@ while cap1.isOpened() or cap2.isOpened():
             # stereo.setBlockSize(blockSize)
             # stereo.setMinDisparity(minDisparity)
             disparity = stereo.compute(img1_rectified, img2_rectified)
+            disparity2 = stereo_right.compute(img2_rectified,img1_rectified)
             # Converting to float32
             disparity = disparity.astype(np.float32)
+            disparity2 = disparity2.astype(np.float32)
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
+            disparity2/=16.0
+            filtered_disp=wls_filter.filter(disparity,img1,disparity_map_right=disparity2)
             # print(frame_count)
             # # Displaying the disparity map
             # cv2.namedWindow("disp", cv2.WINDOW_NORMAL)
@@ -115,11 +138,11 @@ while cap1.isOpened() or cap2.isOpened():
             orig_map = matplotlib.colormaps.get_cmap('hot')
             # reversing the original colormap using reversed() function
             reversed_map = orig_map.reversed()
-            plt.imshow(disparity, reversed_map)
+            plt.imshow(filtered_disp, reversed_map)
             # plt.clim(-30, 30)
             plt.colorbar()
             plt.show()
-            cur_disp = input("Enter disparity: ")
+            cur_disp = np.average(np.array([filtered_disp[mask[8:-8][:].astype(np.bool8)]]))
             disparities = np.append(disparities, cur_disp)
 
         frame_count += 1
