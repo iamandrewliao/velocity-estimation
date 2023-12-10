@@ -42,7 +42,7 @@ flann = cv2.FlannBasedMatcher(index_params,search_params)
 stereo = cv2.StereoSGBM.create(minDisparity=5, numDisparities=112, blockSize=3)
 stereo_right = cv2.ximgproc.createRightMatcher(stereo)
 wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
-wls_filter.setLambda(30000)
+wls_filter.setLambda(35000)
 wls_filter.setSigmaColor(2.7)
 
 while cap1.isOpened() or cap2.isOpened():
