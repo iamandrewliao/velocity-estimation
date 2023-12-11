@@ -12,6 +12,9 @@ import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+from stereovision.calibration import StereoCalibrator, StereoCalibration
+from stereovision.blockmatchers import StereoBM, StereoSGBM
+import os
 
 model = YOLO('yolov8n-seg.pt')
 
@@ -36,18 +39,46 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)   # or pass empty dictionary
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
+win_size = 7
+min_disp = 0
+max_disp = 128
+num_disp = max_disp - min_disp 
+stereo = cv2.StereoSGBM.create(numDisparities=128,blockSize=3,preFilterCap=64)
+# stereo = cv2.StereoSGBM_create(
+#             minDisparity=min_disp,
+#             numDisparities=num_disp,
+#             blockSize=win_size,
+#             uniquenessRatio=5,
+#             speckleWindowSize=75,
+#             speckleRange=1,
+#             disp12MaxDiff=10,
+#             P1=8 * 3 * win_size ** 2,
+#             P2=32 * 3 * win_size ** 2,
+#             mode=cv2.STEREO_SGBM_MODE_HH,
+#             preFilterCap=7
+#         )
+stereo_right = cv2.ximgproc.createRightMatcher(stereo)
+wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
+wls_filter.setLambda(8000)
+wls_filter.setSigmaColor(2)
+
 while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
     okay2, img2 = cap2.read()
-    img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
-    img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
-    img1_color = img1  # keeping a color image to do segmentation later
-    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
-    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-    # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow("frames", 1600, 500)
-    # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
     if okay1 and okay2:
+        img2=cv2.warpAffine(img2,
+                      np.array([[1,0,0],
+                                [0,1,-26]],dtype=np.float32),
+                                (img2.shape[1],img2.shape[0]))
+        img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
+        img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
+        img1_color = img1  # keeping a color image to do segmentation later
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # convert to grayscale
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
+        # cv2.resizeWindow("frames", 1600, 500)
+        # cv2.imshow("frames", np.concatenate((img1, img2), axis=1))
+    
         # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
         # cv2.resizeWindow("frames", 1600, 500)
         # cv2.imshow("frames", np.concatenate((frame1, frame2), axis=1))
@@ -84,7 +115,7 @@ while cap1.isOpened() or cap2.isOpened():
             img2_rectified = cv2.warpPerspective(img2, H2, (w2, h2))
             # Segmentation mask
             img1_color_rectified = cv2.warpPerspective(img1_color, H1, (w1, h1))
-            results = model.predict(img1_color_rectified)
+            results = model.predict(img1_color_rectified,imgsz=img1_color_rectified.shape[1])
             result = results[0]
             mask = result.masks[0].data[0].numpy()  # mask for first car
             # print(mask.shape)
@@ -93,7 +124,11 @@ while cap1.isOpened() or cap2.isOpened():
             # cv2.namedWindow("frames", cv2.WINDOW_NORMAL)
             # cv2.resizeWindow("frames", 1600, 500)
             # cv2.imshow("frames", np.concatenate((img1_rectified, img2_rectified), axis=1))
-            stereo = cv2.StereoSGBM.create(minDisparity=-30, numDisparities=128, blockSize=13)
+            # stereo = cv2.StereoSGBM.create(minDisparity=5, numDisparities=112, blockSize=9)
+            # stereo_right = cv2.ximgproc.createRightMatcher(stereo)
+            # wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
+            # wls_filter.setLambda(30000)
+            # wls_filter.setSigmaColor(2.7)
             # Updating the parameters based on the trackbar positions
             # numDisparities = cv2.getTrackbarPos('numDisparities', 'disp') * 16
             # blockSize = cv2.getTrackbarPos('blockSize', 'disp') * 2 + 5
@@ -103,10 +138,14 @@ while cap1.isOpened() or cap2.isOpened():
             # stereo.setBlockSize(blockSize)
             # stereo.setMinDisparity(minDisparity)
             disparity = stereo.compute(img1_rectified, img2_rectified)
+            disparity2 = stereo_right.compute(img2_rectified,img1_rectified)
             # Converting to float32
             disparity = disparity.astype(np.float32)
+            disparity2 = disparity2.astype(np.float32)
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
+            disparity2/=16.0
+            filtered_disp=wls_filter.filter(disparity,img1,disparity_map_right=disparity2)
             # print(frame_count)
             # Displaying the disparity map
             segmented_disp = cv2.polylines(disparity, pts=np.int32([mask_polygon]),
@@ -115,17 +154,11 @@ while cap1.isOpened() or cap2.isOpened():
             orig_map = matplotlib.colormaps.get_cmap('hot')
             # reversing the original colormap using reversed() function
             reversed_map = orig_map.reversed()
-            plt.imshow(disparity, reversed_map)
+            plt.imshow(filtered_disp, reversed_map)
             # plt.clim(-30, 30)
             plt.colorbar()
             plt.show()
-            # # Get the average disparity values within the segmentation
-            # mask_test = np.zeros((disparity.shape[0], disparity.shape[1]), dtype=np.uint8)
-            # cv2.fillPoly(mask_test, np.int32([mask_polygon]), 255)
-            # average_values = cv2.mean(disparity, mask=mask_test)
-            # average_values = cv2.mean(disparity)
-            # print(average_values)
-            cur_disp = input("Enter disparity: ")
+            cur_disp = np.average(np.array([filtered_disp[mask[8:-8][:].astype(np.bool8)]]))
             disparities = np.append(disparities, cur_disp)
 
         frame_count += 1
