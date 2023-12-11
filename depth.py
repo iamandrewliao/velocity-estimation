@@ -39,11 +39,28 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)   # or pass empty dictionary
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
-stereo = cv2.StereoSGBM.create(minDisparity=5, numDisparities=112, blockSize=3)
+win_size = 7
+min_disp = 0
+max_disp = 128
+num_disp = max_disp - min_disp 
+stereo = cv2.StereoSGBM.create(numDisparities=128,blockSize=3,preFilterCap=64)
+# stereo = cv2.StereoSGBM_create(
+#             minDisparity=min_disp,
+#             numDisparities=num_disp,
+#             blockSize=win_size,
+#             uniquenessRatio=5,
+#             speckleWindowSize=75,
+#             speckleRange=1,
+#             disp12MaxDiff=10,
+#             P1=8 * 3 * win_size ** 2,
+#             P2=32 * 3 * win_size ** 2,
+#             mode=cv2.STEREO_SGBM_MODE_HH,
+#             preFilterCap=7
+#         )
 stereo_right = cv2.ximgproc.createRightMatcher(stereo)
 wls_filter = cv2.ximgproc.createDisparityWLSFilter(stereo)
-wls_filter.setLambda(35000)
-wls_filter.setSigmaColor(2.7)
+wls_filter.setLambda(8000)
+wls_filter.setSigmaColor(2)
 
 while cap1.isOpened() or cap2.isOpened():
     okay1, img1 = cap1.read()
@@ -51,7 +68,7 @@ while cap1.isOpened() or cap2.isOpened():
     if okay1 and okay2:
         img2=cv2.warpAffine(img2,
                       np.array([[1,0,0],
-                                [0,1,-24]],dtype=np.float32),
+                                [0,1,-26]],dtype=np.float32),
                                 (img2.shape[1],img2.shape[0]))
         img1 = cv2.resize(img1, (1280, 720), interpolation=cv2.INTER_AREA)
         img2 = cv2.resize(img2, (1280, 720), interpolation=cv2.INTER_AREA)
