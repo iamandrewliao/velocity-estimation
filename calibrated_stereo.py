@@ -11,7 +11,7 @@ import numpy as np
 from ultralytics import YOLO
 # import yolov7
 
-def get_keypoints_and_descriptors(left, right):
+def get_keypoints_and_descriptors(left, right):  # FOR UNCALIBRATED STEREO
     """Use ORB detector and FLANN matcher to get keypoints, descritpors,
     and corresponding matches that will be good for computing
     homography.
@@ -41,7 +41,7 @@ def get_keypoints_and_descriptors(left, right):
     return kp1, des1, kp2, des2, flann_match_pairs
 
 
-def lowes_ratio_test(matches, ratio_threshold=0.6):
+def lowes_ratio_test(matches, ratio_threshold=0.6):  # FOR UNCALIBRATED STEREO
     """Filter matches using the Lowe's ratio test.
 
     The ratio test checks if matches are ambiguous and should be
@@ -60,7 +60,7 @@ def lowes_ratio_test(matches, ratio_threshold=0.6):
     return filtered_matches
 
 
-def draw_matches(left, right, kp1, des1, kp2, des2, flann_match_pairs):
+def draw_matches(left, right, kp1, des1, kp2, des2, flann_match_pairs):  # FOR UNCALIBRATED STEREO
     """Draw the first 8 matches between the left and right images."""
     # https://docs.opencv.org/4.2.0/d4/d5d/group__features2d__draw.html
     # https://docs.opencv.org/2.4/modules/features2d/doc/common_interfaces_of_descriptor_matchers.html
@@ -75,7 +75,7 @@ def draw_matches(left, right, kp1, des1, kp2, des2, flann_match_pairs):
     )
 
 
-def compute_fundamental_matrix(matches, kp1, kp2, method=cv.FM_RANSAC):
+def compute_fundamental_matrix(matches, kp1, kp2, method=cv.FM_RANSAC):  # FOR UNCALIBRATED STEREO
     """Use the set of good matches to estimate the Fundamental Matrix.
 
     See  https://en.wikipedia.org/wiki/Eight-point_algorithm#The_normalized_eight-point_algorithm
@@ -108,8 +108,7 @@ def compute_fundamental_matrix(matches, kp1, kp2, method=cv.FM_RANSAC):
 #       model.half().to(device)
 
 
-#Values for 
-
+#Values for
 
 # baseline = 508 #this is equivalent to 20 inches in mm
 # left_focal_length=17 #mm
@@ -144,9 +143,10 @@ height =vid_left.get(cv.CAP_PROP_FRAME_HEIGHT)
 print(width,type(width),height,type(height))
 R1, R2, Pn1, Pn2, _,_,_ = cv.stereoRectify(lmtx,ldist,rmtx,rdist,(1920,1080),R,T,alpha=0) 
 
-duration = frame_count/fps
-count=0
-window=5  # window of frames we look at
+duration = frame_count/fps  # necessary to calculate speed
+count=0  # works in conjunction with "window" below
+# window is the amount of data points we look at to get the current speed
+window=5
 
 disparities = np.array([])
 
@@ -207,15 +207,15 @@ while(vid_left.isOpened() and vid_right.isOpened()):
     # right=cv.GaussianBlur(right,[15,15],3)
     # left=cv.GaussianBlur(left,[9,9],2)
     # right=cv.GaussianBlur(right,[9,9],2)
-    erosion_shape=cv.MORPH_RECT
-    erosion_size=3
-    element = cv.getStructuringElement(erosion_shape, (2 * erosion_size + 1, 2 * erosion_size + 1),
-                                        (erosion_size, erosion_size))
-    
-    dilate_shape=cv.MORPH_CROSS
-    dilate_size=3
-    element = cv.getStructuringElement(dilate_shape, (2 * dilate_size + 1, 2 * dilate_size + 1),
-                                        (dilate_size, dilate_size))
+    # erosion_shape=cv.MORPH_RECT
+    # erosion_size=3
+    # element = cv.getStructuringElement(erosion_shape, (2 * erosion_size + 1, 2 * erosion_size + 1),
+    #                                     (erosion_size, erosion_size))
+    #
+    # dilate_shape=cv.MORPH_CROSS
+    # dilate_size=3
+    # element = cv.getStructuringElement(dilate_shape, (2 * dilate_size + 1, 2 * dilate_size + 1),
+    #                                     (dilate_size, dilate_size))
     # left=cv.erode(left,element)
     # right=cv.erode(right,element)
     # left=cv.dilate(left,element)

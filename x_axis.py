@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 model = YOLO('yolov8n.pt')
 
-video_path = "vids/right_fullcar.mp4"
+video_path = "vids/Dec10/pass2/Dec10_left2.mp4"
 
 cap = cv2.VideoCapture(video_path)
 
@@ -52,7 +52,8 @@ while cap.isOpened():
         for box, track_id in zip(boxes, track_ids):
             x, y, w, h = box
             track = track_history[track_id]
-            track.append((float(x)-float(w/2), float(y)))  # x, y is the center point
+            # track.append((float(x)-float(w/2), float(y)))  # x, y is the center point
+            track.append((float(x), float(y)))  # x, y is the center point
             # print(track_history[1])
             # if len(track) > 30:  # retain 90 tracks for 90 frames
             #     track.pop(0)
