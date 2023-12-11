@@ -7,14 +7,14 @@ https://amroamroamro.github.io/mexopencv/matlab/cv.findFundamentalMat.html
 '''
 
 from ultralytics import YOLO
-from PIL import Image, ImageDraw
+# from PIL import Image, ImageDraw
 import numpy as np
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
-from stereovision.calibration import StereoCalibrator, StereoCalibration
-from stereovision.blockmatchers import StereoBM, StereoSGBM
-import os
+# from stereovision.calibration import StereoCalibrator, StereoCalibration
+# from stereovision.blockmatchers import StereoBM, StereoSGBM
+# import os
 
 model = YOLO('yolov8n-seg.pt')
 
@@ -39,11 +39,11 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)   # or pass empty dictionary
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
-win_size = 7
-min_disp = 0
-max_disp = 128
-num_disp = max_disp - min_disp 
-stereo = cv2.StereoSGBM.create(numDisparities=128,blockSize=3,preFilterCap=64)
+# win_size = 7
+# min_disp = 0
+# max_disp = 128
+# num_disp = max_disp - min_disp
+stereo = cv2.StereoSGBM.create(minDisparity=-25, numDisparities=128,blockSize=3,preFilterCap=64)
 # stereo = cv2.StereoSGBM_create(
 #             minDisparity=min_disp,
 #             numDisparities=num_disp,
@@ -158,7 +158,7 @@ while cap1.isOpened() or cap2.isOpened():
             # plt.clim(-30, 30)
             plt.colorbar()
             plt.show()
-            cur_disp = np.average(np.array([filtered_disp[mask[8:-8][:].astype(np.bool8)]]))
+            cur_disp = np.average(np.array([filtered_disp[mask[8:-8][:].astype(np.bool_)]]))
             disparities = np.append(disparities, cur_disp)
 
         frame_count += 1

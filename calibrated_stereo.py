@@ -2,22 +2,26 @@
 
 import cv2 as cv
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
-from PIL import Image
-import torch
-from torchvision import transforms
-import yaml
+# from PIL import Image
+# import torch
+# from torchvision import transforms
+# import yaml
 from ultralytics import YOLO
-import yolov7
+# import yolov7
 
 def get_keypoints_and_descriptors(left, right):
     """Use ORB detector and FLANN matcher to get keypoints, descritpors,
     and corresponding matches that will be good for computing
     homography.
     """
-    orb = cv.ORB_create()
-    kp1, des1 = orb.detectAndCompute(left, None)
-    kp2, des2 = orb.detectAndCompute(right, None)
+    # orb = cv.ORB_create()
+    # kp1, des1 = orb.detectAndCompute(left, None)
+    # kp2, des2 = orb.detectAndCompute(right, None)
+    sift = cv.SIFT_create()
+    kp1, des1 = sift.detectAndCompute(left, None)
+    kp2, des2 = sift.detectAndCompute(right, None)
 
     ############## Using FLANN matcher ##############
     # Each keypoint of the first image is matched with a number of
@@ -57,7 +61,7 @@ def lowes_ratio_test(matches, ratio_threshold=0.6):
 
 
 def draw_matches(left, right, kp1, des1, kp2, des2, flann_match_pairs):
-    """Draw the first 8 mathces between the left and right images."""
+    """Draw the first 8 matches between the left and right images."""
     # https://docs.opencv.org/4.2.0/d4/d5d/group__features2d__draw.html
     # https://docs.opencv.org/2.4/modules/features2d/doc/common_interfaces_of_descriptor_matchers.html
     img = cv.drawMatches(
@@ -72,7 +76,7 @@ def draw_matches(left, right, kp1, des1, kp2, des2, flann_match_pairs):
 
 
 def compute_fundamental_matrix(matches, kp1, kp2, method=cv.FM_RANSAC):
-    """Use the set of good mathces to estimate the Fundamental Matrix.
+    """Use the set of good matches to estimate the Fundamental Matrix.
 
     See  https://en.wikipedia.org/wiki/Eight-point_algorithm#The_normalized_eight-point_algorithm
     for more info.
@@ -95,13 +99,13 @@ def compute_fundamental_matrix(matches, kp1, kp2, method=cv.FM_RANSAC):
         )
     return fundamental_matrix, inliers, pts1, pts2
 
-device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-def load_model():
-   model = torch.load('yolov7/yolov7-mask.pt')
-   model.eval()
-
-   if torch.cuda.is_available():
-      model.half().to(device)
+# device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# def load_model():
+#    model = torch.load('yolov7/yolov7-mask.pt')
+#    model.eval()
+#
+#    if torch.cuda.is_available():
+#       model.half().to(device)
 
 
 #Values for 
@@ -142,22 +146,25 @@ R1, R2, Pn1, Pn2, _,_,_ = cv.stereoRectify(lmtx,ldist,rmtx,rdist,(1920,1080),R,T
 
 duration = frame_count/fps
 count=0
+window=5  # window of frames we look at
 
-win_size = 3
-min_disp = 0
-max_disp = 160
+disparities = np.array([])
+
+block_size = 3
+min_disp = -30
+max_disp = -30+144  # num_disp must be divisible by 16
 num_disp = max_disp - min_disp 
 # left_matcher = cv.StereoSGBM.create(numDisparities=32,blockSize=5,preFilterCap=7,disp12MaxDiff=4)
 left_matcher = cv.StereoSGBM_create(
             minDisparity=min_disp,
             numDisparities=num_disp,
-            blockSize=win_size,
+            blockSize=block_size,
             uniquenessRatio=5,
             speckleWindowSize=150,
             speckleRange=1,
             disp12MaxDiff=0,
-            P1=8 * 3 * win_size ** 2,
-            P2=32 * 3 * win_size ** 2,
+            P1=8 * 3 * block_size ** 2,
+            P2=32 * 3 * block_size ** 2,
             mode=cv.STEREO_SGBM_MODE_SGBM
         )
 wls_filter = cv.ximgproc.createDisparityWLSFilter(left_matcher)
@@ -167,7 +174,6 @@ wls_filter.setSigmaColor(3.1)
 # Read until video is completed
 while(vid_left.isOpened() and vid_right.isOpened()):
   # Capture frame-by-frame
-  count+=1
   ret_left, left = vid_left.read()
   ret_right, right = vid_right.read()
   if ret_left == True and ret_right == True:
@@ -217,7 +223,8 @@ while(vid_left.isOpened() and vid_right.isOpened()):
     left_for_matcher=cv.equalizeHist(left_for_matcher)
     right_for_matcher=cv.equalizeHist(right_for_matcher)
 
-    sift = cv.ORB_create(5500)
+    # sift = cv.SIFT_create()
+    # orb = cv.ORB_create()
 
     # frame = cv.cvtColor(frame,cv.COLOR_BGR2GRAY)
     
@@ -229,14 +236,17 @@ while(vid_left.isOpened() and vid_right.isOpened()):
     
     
     # Display the resulting frame
-    cv.imshow('Left Frame',left)
-    cv.imshow('Right Frame',right)
+    # cv.imshow('Left Frame',left)
+    # cv.imshow('Right Frame',right)
+    cv.namedWindow("frames", cv.WINDOW_NORMAL)
+    cv.resizeWindow("frames", 1600, 500)
+    cv.imshow("frames", np.concatenate((left, right), axis=1))
     # edge_right = cv.Canny(image=right, threshold1=100, threshold2=200) # Canny Edge Detection
     # edge_left = cv.Canny(image=left, threshold1=100, threshold2=200)
     # # Display Canny Edge Detection Image
     # cv.imshow('Canny Edge Detection', edge_right)
     
-    if count%6==0:
+    if count%window==0:
         ############## Find good keypoints to use ##############
         # kp1, des1, kp2, des2, flann_match_pairs = get_keypoints_and_descriptors(left, right)
         # good_matches = lowes_ratio_test(flann_match_pairs, 0.8)
@@ -280,19 +290,22 @@ while(vid_left.isOpened() and vid_right.isOpened()):
         right_disp=right_disp.astype(np.float32)
         right_disp/=16.0
         filtered_disp=wls_filter.filter(left_disp,left,disparity_map_right=right_disp)
-        average_disp=np.average(np.array([filtered_disp[mask[:-8][:].astype(np.bool8)]]))
+        average_disp=np.average(np.array([filtered_disp[mask[:-8][:].astype(np.bool_)]]))
+        disparities = np.append(disparities, average_disp)  # add current disparity of car to disparities array
         print(average_disp)
         # plt.imshow(left_disp)
         # plt.show()
         # plt.imshow(filtered_disp)
         # plt.show()
-
-        plt.imshow(filtered_disp, "gray")
+        orig_map = matplotlib.colormaps.get_cmap('hot')
+        reversed_map = orig_map.reversed()
+        plt.imshow(filtered_disp, reversed_map)
         plt.colorbar()
         plt.show()
     # Press Q on keyboard to  exit
     # if cv.waitKey(25) & 0xFF == ord('q'):
     #   break
+    count += 1
  
   # Break the loop
   else: 
@@ -303,5 +316,6 @@ vid_left.release()
 vid_right.release()
  
 # Closes all the frames
-vid_right.destroyAllWindows()
+cv.destroyAllWindows()
 
+disparities.tofile('disparities.csv', sep=',')
