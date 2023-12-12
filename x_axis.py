@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # imgL = cv2.imread('left-fullcar.jpg', cv2.IMREAD_GRAYSCALE)
 # imgR = cv2.imread('right-fullcar.jpg', cv2.IMREAD_GRAYSCALE)
@@ -53,7 +54,7 @@ while cap.isOpened():
             x, y, w, h = box
             track = track_history[track_id]
             # track.append((float(x)-float(w/2), float(y)))  # x, y is the center point
-            track.append((float(x), float(y)))  # x, y is the center point
+            track.append(np.array([float(x), float(y)]))  # x, y is the center point
             # print(track_history[1])
             # if len(track) > 30:  # retain 90 tracks for 90 frames
             #     track.pop(0)
@@ -77,7 +78,10 @@ while cap.isOpened():
 
         # For speed calculation, get position every n frame; n determined by window
         if frame_count % window == 0:
-            positions = np.append(positions, track_history[1][frame_count][0])
+            if positions.shape[0] == 0:
+                positions = np.expand_dims(track_history[1][frame_count],0)
+            else:
+                positions = np.concatenate([positions, np.expand_dims(track_history[1][frame_count],0)],0)
 
         # Display the annotated frame
         cv2.imshow("Annotated Frame", annotated_frame)
@@ -95,7 +99,8 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 
-positions.tofile('positions.csv', sep=',')
+positions = pd.DataFrame(positions)
+positions.to_csv('positions.csv', sep=',')
 
 #
 # print(track_history[1])  # output the track coordinates for car id=1
