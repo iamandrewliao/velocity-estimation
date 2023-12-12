@@ -145,17 +145,17 @@ while cap1.isOpened() or cap2.isOpened():
             # Scaling down the disparity values
             disparity = (disparity / 16.0)
             disparity2/=16.0
-            filtered_disp=wls_filter.filter(disparity,img1,disparity_map_right=disparity2)
+            filtered_disp=wls_filter.filter(disparity,img1_rectified,disparity_map_right=disparity2)
             # print(frame_count)
             # Displaying the disparity map
-            segmented_disp = cv2.polylines(disparity, pts=np.int32([mask_polygon]),
+            segmented_disp = cv2.polylines(filtered_disp, pts=np.int32([mask_polygon]),
                                            isClosed=True, color=(229, 255, 0), thickness=4)
             # cv2.imshow('segmented disparity image', segmented_disp)
             orig_map = matplotlib.colormaps.get_cmap('hot')
             # reversing the original colormap using reversed() function
             reversed_map = orig_map.reversed()
-            plt.imshow(filtered_disp, reversed_map)
-            # plt.clim(-30, 30)
+            plt.imshow(segmented_disp, reversed_map)
+            plt.clim(-30, 50)
             plt.colorbar()
             plt.show()
             cur_disp = np.average(np.array([filtered_disp[mask[8:-8][:].astype(np.bool_)]]))
